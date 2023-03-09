@@ -6,6 +6,8 @@ import de.xuuniversity.co1.memorygame.helper.GameTimer;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -18,8 +20,10 @@ public class AppFrame extends JFrame {
     private GameTimer gameTimer = null;
     private int score = 0;
     private JLabel scoreLabel = null;
+    private JLabel highscoreLabel = null;
     private final JPanel rootPanel = new JPanel(new BorderLayout());
-    private final int currentHighscore = HighscoreService.getCurrentHighscore();
+    private int currentHighscore = HighscoreService.getCurrentHighscore();
+    private boolean highscoreBeaten = false;
 
     public AppFrame() {
         super("Memory Game");
@@ -35,7 +39,8 @@ public class AppFrame extends JFrame {
         this.setLocation(x, y);
 
         this.setResizable(false);
-        this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        this.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        this.windowClosing();
 
         rootPanel.add(createTopPanel(), BorderLayout.NORTH);
         rootPanel.add(createButtonPanel(), BorderLayout.CENTER);
@@ -51,16 +56,17 @@ public class AppFrame extends JFrame {
         timeLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
         gameTimer = new GameTimer(timeLabel);
 
-        JLabel scoreLabel = new JLabel("Score: " + score);
-        scoreLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        this.scoreLabel = scoreLabel;
+        JLabel currentScore = new JLabel("Score: " + this.score);
+        currentScore.setAlignmentX(Component.CENTER_ALIGNMENT);
+        this.scoreLabel = currentScore;
 
-        JLabel highscoreLabel = new JLabel("Highscore: " + currentHighscore);
-        highscoreLabel.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        JLabel highscore = new JLabel("Highscore: " + currentHighscore);
+        highscore.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        this.highscoreLabel = highscore;
 
         topPanel.add(timeLabel);
-        topPanel.add(scoreLabel);
-        topPanel.add(highscoreLabel);
+        topPanel.add(currentScore);
+        topPanel.add(highscore);
 
         return topPanel;
     }
@@ -69,7 +75,7 @@ public class AppFrame extends JFrame {
         JPanel buttonPanel = new JPanel(new GridLayout(2, 4));
 
         //Create the random numbers and assign them to the buttons
-        Set<Integer> randomNumbers = createRandomNumbers();
+        Set<Integer> randomNumbers = this.createRandomNumbers();
         List<JButton> buttons = new ArrayList<>();
 
         for(Integer number : randomNumbers){
@@ -82,7 +88,7 @@ public class AppFrame extends JFrame {
         }
 
         //Add the buttons to the panel in a random order
-        while (buttons.size() > 0) {
+        while (!buttons.isEmpty()) {
             int randomIndex = (int) (Math.random() * buttons.size());
             buttonPanel.add(buttons.get(randomIndex));
             buttons.remove(randomIndex);
@@ -109,7 +115,7 @@ public class AppFrame extends JFrame {
         JButton clickedButton = (JButton) e.getSource();
 
         //If no button is selected, cover the previously selected buttons and select the clicked button
-        if(selectedButtons.size() == 0){
+        if(selectedButtons.isEmpty()){
             for (JButton button : buttonsToCover) {
                 button.setText("");
             }
@@ -149,28 +155,32 @@ public class AppFrame extends JFrame {
 
 
         if(revealedButtons.size() == 8){
-            gameTimer.stop();
+            gameFinished();
+        }
+    }
 
-            String message = score > currentHighscore ?
-                    "You won and beat the Highscore! \nYour score is " + score + " points. \nDo you want to play again?":
-                    "You won! Your score is " + score + " points. \nDo you want to play again?";
-            int result = JOptionPane.showConfirmDialog(
-                    this, message, "You won!",
-                    JOptionPane.YES_NO_OPTION);
+    private void gameFinished(){
+        gameTimer.stop();
+        String message;
 
-            if(result == JOptionPane.YES_OPTION){
-                resetGame();
+        if(score > currentHighscore) {
+            message = "You won and beat the Highscore! \nYour score is " + score + " points. \nDo you want to play again?";
+            currentHighscore = score;
+            highscoreBeaten = true;
 
-            }else if(result == JOptionPane.NO_OPTION){
-                if(score > currentHighscore){
-                    System.out.println("New Highscore: " + score + " points was saved.");
-                    HighscoreService.saveHighscore(score);
-                }
+        }else{
+            message = "You won! Your score is " + score + " points. \nDo you want to play again?";
+        }
 
-                System.out.println("No Highscore was saved - Goodbye!");
-                System.exit(0);
-            }
+        int result = JOptionPane.showConfirmDialog(
+                this, message, "You won!",
+                JOptionPane.YES_NO_OPTION);
 
+        if(result == JOptionPane.YES_OPTION){
+            resetGame();
+
+        }else if(result == JOptionPane.NO_OPTION){
+            this.dispatchEvent(new WindowEvent(this, WindowEvent.WINDOW_CLOSING));
         }
     }
 
@@ -181,9 +191,35 @@ public class AppFrame extends JFrame {
         rootPanel.remove(1);
         rootPanel.add(createButtonPanel(), BorderLayout.CENTER);
         scoreLabel.setText("Score: " + score);
+        highscoreLabel.setText("Highscore: " + currentHighscore);
         gameTimer.stop();
         gameTimer.reset();
     }
+
+    private void windowClosing(){
+        this.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                if(highscoreBeaten) {
+                    int result = JOptionPane.showConfirmDialog(
+                            null, "Do you want to save your Highscore?", "Exit",
+                            JOptionPane.YES_NO_OPTION);
+
+                    if(result == JOptionPane.YES_OPTION){
+                        System.out.println("Highscore was saved - Goodbye!");
+                        HighscoreService.saveHighscore(currentHighscore);
+                    }else{
+                        System.out.println("No Highscore was saved - Goodbye!");
+                    }
+
+                    System.exit(0);
+
+                }
+            }
+        });
+    }
+
+
 
 
 
