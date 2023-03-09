@@ -14,8 +14,7 @@ import java.util.Set;
 public class AppFrame extends JFrame {
     private final Set<JButton> selectedButtons = new HashSet<>();
     private final Set<JButton> revealedButtons = new HashSet<>();
-    List<JButton> buttonsToCover = new ArrayList<>();
-
+    private final List<JButton> buttonsToCover = new ArrayList<>();
     private GameTimer gameTimer = null;
     private int score = 0;
     private JLabel scoreLabel = null;
@@ -114,15 +113,19 @@ public class AppFrame extends JFrame {
             for (JButton button : buttonsToCover) {
                 button.setText("");
             }
+
             buttonsToCover.clear();
             clickedButton.setText(clickedButton.getName());
             selectedButtons.add(clickedButton);
             return;
         }
 
+        //If one button is selected, check if the clicked button is the same as the selected button
+        //After this check if the name of the clicked button is the same as the name of the selected button
         if(selectedButtons.size() == 1 && !selectedButtons.contains(clickedButton)){
             clickedButton.setText(clickedButton.getName());
             JButton firstButton = selectedButtons.iterator().next();
+
             if(firstButton.getName().equals(clickedButton.getName())){
                 firstButton.setEnabled(false);
                 clickedButton.setEnabled(false);
@@ -131,10 +134,12 @@ public class AppFrame extends JFrame {
                 score += 10;
                 scoreLabel.setText("Score: " + score);
                 selectedButtons.clear();
+
             }else{
                 buttonsToCover.add(firstButton);
                 buttonsToCover.add(clickedButton);
                 selectedButtons.clear();
+
                 if(score > 0){
                     score -= 5;
                     scoreLabel.setText("Score: " + score);
@@ -145,6 +150,7 @@ public class AppFrame extends JFrame {
 
         if(revealedButtons.size() == 8){
             gameTimer.stop();
+
             String message = score > currentHighscore ?
                     "You won and beat the Highscore! \nYour score is " + score + " points. \nDo you want to play again?":
                     "You won! Your score is " + score + " points. \nDo you want to play again?";
@@ -154,11 +160,13 @@ public class AppFrame extends JFrame {
 
             if(result == JOptionPane.YES_OPTION){
                 resetGame();
+
             }else if(result == JOptionPane.NO_OPTION){
                 if(score > currentHighscore){
                     System.out.println("New Highscore: " + score + " points was saved.");
                     HighscoreService.saveHighscore(score);
                 }
+
                 System.out.println("No Highscore was saved - Goodbye!");
                 System.exit(0);
             }
